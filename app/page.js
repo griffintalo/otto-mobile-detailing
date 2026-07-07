@@ -228,15 +228,37 @@ export default function OttoDetailing() {
     }
   };
 
-  const toggleDate = async (iso) => {
+const toggleDate = async (iso) => {
     setAdminMsg("");
+
+    // Optimistic update: flip the date's open/closed state immediately in the UI
+    const wasOpen = !!(availability[adminLoc] && availability[adminLoc][iso]);
+    setAvailability((prev) => {
+      const next = { ...prev, [adminLoc]: { ...(prev[adminLoc] || {}) } };
+      if (wasOpen) delete next[adminLoc][iso];
+      else next[adminLoc][iso] = true;
+      return next;
+    });
+
     const res = await fetch("/api/admin/availability", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ locId: adminLoc, date: iso }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok && data.error) setAdminMsg(data.error);
+
+    if (!res.ok) {
+      // Roll back the optimistic change since the server rejected it
+      setAvailability((prev) => {
+        const next = { ...prev, [adminLoc]: { ...(prev[adminLoc] || {}) } };
+        if (wasOpen) next[adminLoc][iso] = true;
+        else delete next[adminLoc][iso];
+        return next;
+      });
+      if (data.error) setAdminMsg(data.error);
+    }
+
+    // Sync with the server in the background to catch any other changes (e.g. new bookings)
     refresh();
   };
 
