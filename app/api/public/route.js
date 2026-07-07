@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 // Public data: which dates are open and which are taken.
 // Deliberately does NOT include any customer information.
@@ -25,7 +27,10 @@ export async function GET() {
       booked[r.loc_id][r.date] = true;
     });
 
-    return NextResponse.json({ availability, booked });
+    return NextResponse.json(
+      { availability, booked },
+      { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" } }
+    );
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Could not load calendar." }, { status: 500 });
