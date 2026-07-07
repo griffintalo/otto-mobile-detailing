@@ -4,6 +4,9 @@ export const metadata = {
   title: "Otto Mobile Detailing — Book Online | Bucks County PA & Lake Norman NC",
   description:
     "Professional mobile car detailing in Bucks County, PA and Lake Norman, NC. We come to your driveway. Book your wash, interior, exterior, or full detail online.",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }) {

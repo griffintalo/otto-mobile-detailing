@@ -299,16 +299,10 @@ export default function OttoDetailing() {
 
   const header = (
     <header style={{ background: BRAND.black }} className="text-white">
-      <div className="max-w-4xl mx-auto px-5 py-4 flex items-center justify-between">
+      <div className="max-w-4xl mx-auto px-5 py-3 flex items-center justify-between">
         <button onClick={() => setView("home")} className="text-left">
-          <div className="flex items-baseline gap-2">
-            <span style={{ fontFamily: "'Barlow Condensed', sans-serif" }} className="text-3xl font-bold tracking-wider uppercase">
-              OTTO
-            </span>
-            <span style={{ color: BRAND.red, fontFamily: "'Barlow Condensed', sans-serif" }} className="text-xl font-bold uppercase tracking-widest">
-              Mobile Detailing
-            </span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Otto Mobile Detailing" className="h-16 w-auto" />
         </button>
         <div className="text-xs text-neutral-400 text-right">
           PA · NC<br />We come to you
