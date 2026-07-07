@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   BRAND, PHONE, EMAIL, GOOGLE_REVIEW_URL, HOURS,
   LOCATIONS, SERVICES, priceFor, serviceById,
@@ -113,11 +113,16 @@ export default function OttoDetailing() {
   const [loginError, setLoginError] = useState("");
   const [adminMsg, setAdminMsg] = useState("");
 
+  const refreshCounter = useRef(0);
+
   const refresh = useCallback(async () => {
+    const myTurn = ++refreshCounter.current;
     try {
       const res = await fetch("/api/public", { cache: "no-store" });
       const data = await res.json();
-      if (res.ok) {
+      // Only apply this response if no newer refresh() call has started since.
+      // Prevents a slow, older request from overwriting fresher data.
+      if (res.ok && myTurn === refreshCounter.current) {
         setAvailability(data.availability || {});
         setBookedMap(data.booked || {});
       }
