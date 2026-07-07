@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   BRAND, PHONE, EMAIL, GOOGLE_REVIEW_URL, HOURS,
-  LOCATIONS, SERVICES, priceFor, serviceById,
+  LOCATIONS, SERVICES, priceFor, serviceById, servicesFromString, totalPriceFor,
 } from "@/lib/business";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -103,7 +103,7 @@ export default function OttoDetailing() {
   const [calMonth, setCalMonth] = useState(now.getMonth());
   const [calYear, setCalYear] = useState(now.getFullYear());
   const [selectedDate, setSelectedDate] = useState(null);
-  const [form, setForm] = useState({ service: "premium-full", vehicleType: "sedan", name: "", phone: "", email: "", vehicle: "", notes: "" });
+  const [form, setForm] = useState({ services: ["premium-full"], vehicleType: "sedan", name: "", phone: "", email: "", vehicle: "", notes: "" });
   const [confirmed, setConfirmed] = useState(null);
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -153,7 +153,7 @@ export default function OttoDetailing() {
   const startBooking = (l) => {
     setLoc(l);
     setSelectedDate(null);
-    setForm({ service: "premium-full", vehicleType: "sedan", name: "", phone: "", email: "", vehicle: "", notes: "" });
+    setForm({ services: ["premium-full"], vehicleType: "sedan", name: "", phone: "", email: "", vehicle: "", notes: "" });
     setFormError("");
     setView("book");
     refresh();
@@ -161,6 +161,7 @@ export default function OttoDetailing() {
 
   const submitBooking = async () => {
     if (!selectedDate) { setFormError("Pick an open date on the calendar first."); return; }
+    if (form.services.length === 0) { setFormError("Choose at least one service."); return; }
     setSubmitting(true);
     setFormError("");
     try {
@@ -170,7 +171,7 @@ export default function OttoDetailing() {
         body: JSON.stringify({
           locId: loc.id,
           date: selectedDate,
-          service: form.service,
+          services: form.services,
           vehicleType: form.vehicleType,
           name: form.name,
           phone: form.phone,
@@ -233,7 +234,7 @@ export default function OttoDetailing() {
     }
   };
 
-const toggleDate = async (iso) => {
+  const toggleDate = async (iso) => {
     setAdminMsg("");
 
     // Optimistic update: flip the date's open/closed state immediately in the UI
@@ -275,7 +276,16 @@ const toggleDate = async (iso) => {
     }
   };
 
-  const selectedService = serviceById(form.service);
+  const selectedServices = form.services.map((id) => serviceById(id)).filter(Boolean);
+  const anyVaries = selectedServices.some((s) => s.varies);
+
+  const toggleService = (id) => {
+    setForm((f) => {
+      const has = f.services.includes(id);
+      const services = has ? f.services.filter((x) => x !== id) : [...f.services, id];
+      return { ...f, services };
+    });
+  };
 
   // ---------------- render ----------------
 
@@ -401,37 +411,6 @@ const toggleDate = async (iso) => {
 
           <section className="py-8">
             <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif" }} className="text-3xl font-bold text-neutral-900 uppercase tracking-wide mb-4">
-              Meet the Owner
-            </h2>
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif" }} className="text-2xl font-bold text-neutral-900 uppercase">
-                Griffin Talomie
-              </div>
-              <div className="text-sm font-semibold mt-1" style={{ color: BRAND.red }}>
-                Owner · Otto Mobile Detailing
-              </div>
-              <p className="text-neutral-600 mt-3 leading-relaxed">
-                Hi, I'm Griffin — a mechanical engineering student at the University of Tennessee with
-                professional experience at a dealership detail center working on BMW, Lexus, and Toyota
-                vehicles. I'll treat your car like my own, from wash and wax to full interior and
-                exterior details.
-              </p>
-              <p className="text-neutral-600 mt-2 leading-relaxed">
-                Best of all, you don't even need to leave your house. I detail your car right in your
-                driveway — all I need is access to power and water.
-              </p>
-              <div className="flex flex-wrap gap-2 mt-4">
-                {["Dealership-trained", "BMW · Lexus · Toyota experience", "We come to you"].map((tag) => (
-                  <span key={tag} className="rounded-full bg-neutral-100 border border-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-700">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="py-8">
-            <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif" }} className="text-3xl font-bold text-neutral-900 uppercase tracking-wide mb-4">
               Services & Pricing
             </h2>
             <div className="grid sm:grid-cols-2 gap-3">
@@ -460,6 +439,37 @@ const toggleDate = async (iso) => {
             </div>
             <p className="text-xs text-neutral-400 mt-3">*Price may vary depending on condition of car</p>
           </section>
+
+          <section className="py-8">
+            <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif" }} className="text-3xl font-bold text-neutral-900 uppercase tracking-wide mb-4">
+              Meet the Owner
+            </h2>
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif" }} className="text-2xl font-bold text-neutral-900 uppercase">
+                Griffin Talomie
+              </div>
+              <div className="text-sm font-semibold mt-1" style={{ color: BRAND.red }}>
+                Owner · Otto Mobile Detailing
+              </div>
+              <p className="text-neutral-600 mt-3 leading-relaxed">
+                Hi, I'm Griffin — a mechanical engineering student at the University of Tennessee with
+                professional experience at a dealership detail center working on BMW, Lexus, and Toyota
+                vehicles. I'll treat your car like my own, from wash and wax to full interior and
+                exterior details.
+              </p>
+              <p className="text-neutral-600 mt-2 leading-relaxed">
+                Best of all, you don't even need to leave your house. I detail your car right in your
+                driveway — all I need is access to power and water.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-4">
+                {["Dealership-trained", "BMW · Lexus · Toyota experience", "We come to you"].map((tag) => (
+                  <span key={tag} className="rounded-full bg-neutral-100 border border-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-700">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </section>
         </main>
         {footer}
       </div>
@@ -468,7 +478,7 @@ const toggleDate = async (iso) => {
 
   // ----- BOOK -----
   if (view === "book" && loc) {
-    const price = selectedService ? priceFor(selectedService, form.vehicleType) : 0;
+    const price = totalPriceFor(form.services, form.vehicleType);
     return (
       <div className="min-h-screen bg-neutral-50 flex flex-col">
         {header}
@@ -519,17 +529,35 @@ const toggleDate = async (iso) => {
                 ))}
               </div>
 
-              <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">Service</label>
-              <select
-                value={form.service}
-                onChange={(e) => setForm({ ...form, service: e.target.value })}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 mb-1 bg-white"
-              >
-                {SERVICES.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name} — ${priceFor(s, form.vehicleType)}</option>
-                ))}
-              </select>
-              {selectedService && selectedService.varies ? (
+              <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+                Services {form.services.length > 0 && <span className="normal-case font-normal text-neutral-400">({form.services.length} selected)</span>}
+              </label>
+              <div className="border border-neutral-300 rounded-lg divide-y divide-neutral-200 mb-1 max-h-56 overflow-y-auto">
+                {SERVICES.map((s) => {
+                  const checked = form.services.includes(s.id);
+                  return (
+                    <label
+                      key={s.id}
+                      className={"flex items-center justify-between gap-3 px-3 py-2 cursor-pointer text-sm " + (checked ? "bg-red-50" : "hover:bg-neutral-50")}
+                    >
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleService(s.id)}
+                          className="accent-current"
+                          style={{ accentColor: BRAND.red }}
+                        />
+                        <span className="font-medium text-neutral-800">{s.name}{s.varies ? "*" : ""}</span>
+                      </span>
+                      <span className="font-semibold whitespace-nowrap" style={{ color: BRAND.red }}>
+                        ${priceFor(s, form.vehicleType)}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              {anyVaries ? (
                 <p className="text-xs text-neutral-400 mb-3">*Price may vary depending on condition of car</p>
               ) : (
                 <div className="mb-3" />
@@ -581,9 +609,9 @@ const toggleDate = async (iso) => {
 
   // ----- CONFIRM -----
   if (view === "confirm" && confirmed) {
-    const s = serviceById(confirmed.service);
+    const confirmedServices = servicesFromString(confirmed.service);
     const l = LOCATIONS.find((x) => x.id === confirmed.locId);
-    const price = s ? priceFor(s, confirmed.vehicleType || "sedan") : null;
+    const price = totalPriceFor(confirmedServices.map((s) => s.id), confirmed.vehicleType || "sedan");
     return (
       <div className="min-h-screen bg-neutral-50 flex flex-col">
         {header}
@@ -595,10 +623,10 @@ const toggleDate = async (iso) => {
           <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-5 text-left shadow-sm">
             <div className="text-sm text-neutral-500">Appointment</div>
             <div className="font-bold text-neutral-900">{prettyDate(confirmed.date)}</div>
-            <div className="mt-2 text-sm text-neutral-500">Service</div>
+            <div className="mt-2 text-sm text-neutral-500">Services</div>
             <div className="font-semibold text-neutral-800">
-              {s ? s.name : confirmed.service}
-              {price !== null && <span style={{ color: BRAND.red }}> — ${price}</span>}
+              {confirmedServices.length ? confirmedServices.map((s) => s.name).join(", ") : confirmed.service}
+              {" "}<span style={{ color: BRAND.red }}>— ${price}</span>
               <span className="text-neutral-400 text-sm"> ({confirmed.vehicleType === "suv" ? "SUV/Truck" : "Sedan"})</span>
             </div>
             <div className="mt-2 text-sm text-neutral-500">Area</div>
@@ -717,8 +745,8 @@ const toggleDate = async (iso) => {
               )}
               <div className="space-y-3">
                 {locBookings.map((b) => {
-                  const s = serviceById(b.service);
-                  const price = s ? priceFor(s, b.vehicle_type || "sedan") : null;
+                  const bServices = servicesFromString(b.service);
+                  const price = totalPriceFor(bServices.map((s) => s.id), b.vehicle_type || "sedan");
                   return (
                     <div key={b.id} className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
@@ -731,7 +759,7 @@ const toggleDate = async (iso) => {
                             {b.vehicle} <span className="text-neutral-400">({b.vehicle_type === "suv" ? "SUV/Truck" : "Sedan"})</span>
                           </div>
                           <div className="text-sm font-semibold mt-1" style={{ color: BRAND.red }}>
-                            {s ? s.name : b.service}{price !== null ? ` — $${price}` : ""}
+                            {bServices.length ? bServices.map((s) => s.name).join(", ") : b.service} — ${price}
                           </div>
                           {b.notes && <div className="text-xs text-neutral-400 mt-1">"{b.notes}"</div>}
                         </div>
